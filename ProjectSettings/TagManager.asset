@@ -18,6 +18,11 @@ TagManager:
   - Tee
   - LShapedLeft
   - LShapedRight
+  - ColTopLeft
+  - ColTopRight
+  - ColMid
+  - ColBotLeft
+  - ColBotRight
   layers:
   - Default
   - TransparentFX
