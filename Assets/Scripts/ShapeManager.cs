@@ -2,7 +2,8 @@ using UnityEngine;
 
 public class ShapeManager : MonoBehaviour
 {
-    public GameObject[] shapes;
+    public GameObject[] topShapes;
+    public GameObject[] botShapes;
     public GameObject topContainer;
     public GameObject botContainer;
     public GameObject currentTopShape;
@@ -12,6 +13,7 @@ public class ShapeManager : MonoBehaviour
 
     public LevelVariables levelScript;
     public AudioManager audioManager;
+    public GameManager gameManager;
     public CameraShake shake;
 
     //powerup variables
@@ -87,7 +89,7 @@ public class ShapeManager : MonoBehaviour
 
     public void SpawnTop()
     {
-        GameObject randomShape = shapes[Random.Range(0, 7)];
+        GameObject randomShape = topShapes[Random.Range(0, 7)];
 
         //top shape spawn
         GameObject topShape = Instantiate(randomShape, topSpawn.transform.position, Quaternion.identity);
@@ -97,7 +99,7 @@ public class ShapeManager : MonoBehaviour
 
     public void SpawnBot() 
     {
-        GameObject randomShape = shapes[Random.Range(0, 7)];
+        GameObject randomShape = botShapes[Random.Range(0, 7)];
 
         //bottom shape spawn
         GameObject botShape = Instantiate(randomShape, botSpawn.transform.position, Quaternion.identity);
@@ -236,6 +238,7 @@ public class ShapeManager : MonoBehaviour
         else 
         {
             topFastMode = false;
+            gameManager.AdjustScore(currentTopShape.gameObject.tag);
             SpawnTop();
         }
     }
@@ -249,6 +252,7 @@ public class ShapeManager : MonoBehaviour
         else
         {
             botFastMode = false;
+            gameManager.AdjustScore(currentBotShape.gameObject.tag);
             SpawnBot();
         }
     }
@@ -485,7 +489,14 @@ public class ShapeManager : MonoBehaviour
                     hit.collider.gameObject.tag == "Block4" ||
                     hit.collider.gameObject.tag == "Block5" ||
                     hit.collider.gameObject.tag == "Block6" ||
-                    hit.collider.gameObject.tag == "Block7")
+                    hit.collider.gameObject.tag == "Block7" ||
+                    hit.collider.gameObject.tag == "Block8" ||
+                    hit.collider.gameObject.tag == "Block9" ||
+                    hit.collider.gameObject.tag == "Block10" ||
+                    hit.collider.gameObject.tag == "Block11" ||
+                    hit.collider.gameObject.tag == "Block12" ||
+                    hit.collider.gameObject.tag == "Block13" ||
+                    hit.collider.gameObject.tag == "Block14")
                 {
                     blocksHit++;
                 }
@@ -501,7 +512,14 @@ public class ShapeManager : MonoBehaviour
                         hit.collider.gameObject.tag == "Block4" ||
                         hit.collider.gameObject.tag == "Block5" ||
                         hit.collider.gameObject.tag == "Block6" ||
-                        hit.collider.gameObject.tag == "Block7")
+                        hit.collider.gameObject.tag == "Block7" ||
+                        hit.collider.gameObject.tag == "Block8" ||
+                        hit.collider.gameObject.tag == "Block9" ||
+                        hit.collider.gameObject.tag == "Block10" ||
+                        hit.collider.gameObject.tag == "Block11" ||
+                        hit.collider.gameObject.tag == "Block12" ||
+                        hit.collider.gameObject.tag == "Block13" ||
+                        hit.collider.gameObject.tag == "Block14")
                     {
                         Destroy(hit.collider.gameObject);
                     }
@@ -509,45 +527,59 @@ public class ShapeManager : MonoBehaviour
             }
         }
 
-        //// for each line below the midpoint
-        //for (float i = -0.5f; i > levelScript.botBoundary; i++)
-        //{
-        //    int blocksHit = 0;
-        //    Vector3 rayOrigin = new Vector3(-1f, i, 0f);
-        //    Debug.DrawRay(rayOrigin, Vector2.right * 15f, Color.red, 1f);
-        //    RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, Vector2.right, 15f);
+        // for each line below the midpoint
+        for (float i = -0.5f; i > levelScript.botBoundary; i--)
+        {
+            int blocksHit = 0;
+            Vector3 rayOrigin = new Vector3(-1f, i, 0f);
+            Debug.DrawRay(rayOrigin, Vector2.right * 15f, Color.red, 1f);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, Vector2.right, 15f);
 
-        //    foreach (RaycastHit2D hit in hits)
-        //    {
-        //        if (hit.collider.gameObject.tag == "Block1" ||
-        //            hit.collider.gameObject.tag == "Block2" ||
-        //            hit.collider.gameObject.tag == "Block3" ||
-        //            hit.collider.gameObject.tag == "Block4" ||
-        //            hit.collider.gameObject.tag == "Block5" ||
-        //            hit.collider.gameObject.tag == "Block6" ||
-        //            hit.collider.gameObject.tag == "Block7")
-        //        {
-        //            blocksHit++;
-        //        }
-        //    }
+            foreach (RaycastHit2D hit in hits)
+            {
+                if (hit.collider.gameObject.tag == "Block1" ||
+                    hit.collider.gameObject.tag == "Block2" ||
+                    hit.collider.gameObject.tag == "Block3" ||
+                    hit.collider.gameObject.tag == "Block4" ||
+                    hit.collider.gameObject.tag == "Block5" ||
+                    hit.collider.gameObject.tag == "Block6" ||
+                    hit.collider.gameObject.tag == "Block7" ||
+                    hit.collider.gameObject.tag == "Block8" ||
+                    hit.collider.gameObject.tag == "Block9" ||
+                    hit.collider.gameObject.tag == "Block10" ||
+                    hit.collider.gameObject.tag == "Block11" ||
+                    hit.collider.gameObject.tag == "Block12" ||
+                    hit.collider.gameObject.tag == "Block13" ||
+                    hit.collider.gameObject.tag == "Block14")
+                {
+                    blocksHit++;
+                }
+            }
 
-        //    if (blocksHit == 10)
-        //    {
-        //        foreach (RaycastHit2D hit in hits)
-        //        {
-        //            if (hit.collider.gameObject.tag == "Block1" ||
-        //                hit.collider.gameObject.tag == "Block2" ||
-        //                hit.collider.gameObject.tag == "Block3" ||
-        //                hit.collider.gameObject.tag == "Block4" ||
-        //                hit.collider.gameObject.tag == "Block5" ||
-        //                hit.collider.gameObject.tag == "Block6" ||
-        //                hit.collider.gameObject.tag == "Block7")
-        //            {
-        //                Destroy(hit.collider.gameObject);
-        //            }
-        //        }
-        //    }
-        //}
+            if (blocksHit == 10)
+            {
+                foreach (RaycastHit2D hit in hits)
+                {
+                    if (hit.collider.gameObject.tag == "Block1" ||
+                        hit.collider.gameObject.tag == "Block2" ||
+                        hit.collider.gameObject.tag == "Block3" ||
+                        hit.collider.gameObject.tag == "Block4" ||
+                        hit.collider.gameObject.tag == "Block5" ||
+                        hit.collider.gameObject.tag == "Block6" ||
+                        hit.collider.gameObject.tag == "Block7" ||
+                        hit.collider.gameObject.tag == "Block8" ||
+                        hit.collider.gameObject.tag == "Block9" ||
+                        hit.collider.gameObject.tag == "Block10" ||
+                        hit.collider.gameObject.tag == "Block11" ||
+                        hit.collider.gameObject.tag == "Block12" ||
+                        hit.collider.gameObject.tag == "Block13" ||
+                        hit.collider.gameObject.tag == "Block14")
+                    {
+                        Destroy(hit.collider.gameObject);
+                    }
+                }
+            }
+        }
 
         //move remaining blocks down by amount of lines removed
     }

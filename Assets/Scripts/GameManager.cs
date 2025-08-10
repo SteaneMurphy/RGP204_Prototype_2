@@ -1,22 +1,19 @@
 using System.Collections;
 using UnityEngine;
+using static UnityEngine.UI.Image;
 
 public class GameManager : MonoBehaviour
 {
     public ShapeManager shapeManager;
     public AudioManager audioManager;
+    public UIManager UIManager;
 
     public GameObject tutorialOverlay;
-    private bool gameStart = false;
+    private bool gameStart;
 
-    [Header("Powerups")]
-    public bool freezeBot = false;
-    public bool freezeTop = false;
-    public bool gameSlowDown = false;
-    public bool rerollTop = false;
-    public bool rerollBot = false;
-    public bool clearTop = false;
-    public bool clearBot = false;
+    private int score = 0;
+
+    private bool hasPowerUp;
 
     [Header("Powerup Variables")]
     [SerializeField] float freezeTimeMin;
@@ -25,69 +22,54 @@ public class GameManager : MonoBehaviour
     [SerializeField] float slowDownTimeMax;
     [SerializeField] float slowDownSpeed;
     [SerializeField] float musicSlowSpeed;
+    [SerializeField] float powerupTiming;
+    [SerializeField] float powerupSoundDelay;
+    private float timeElapsed;
+    private float powerupSoundTimer;
 
     private void Start()
     {
         shapeManager.slowDownSpeed = slowDownSpeed;
+        timeElapsed = powerupTiming;
+        hasPowerUp = false;
+        gameStart = false;
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Q) && gameStart == false) 
+        if (Input.GetKeyDown(KeyCode.Q) && gameStart == false)
         {
             tutorialOverlay.SetActive(false);
             shapeManager.SpawnTop();
             shapeManager.SpawnBot();
+            gameStart = true;
         }
 
-        if (freezeBot) 
+        if (!hasPowerUp && gameStart) 
         {
-            freezeBot = false;
-            StartCoroutine(FreezeBottomScreen());
+            PowerupTimer();
         }
 
-        if (freezeTop) 
+        if (Input.GetKey(KeyCode.Q) && hasPowerUp && gameStart)
         {
-            freezeTop = false;
-            StartCoroutine(FreezeTopScreen());
+            UsePowerup();
+            hasPowerUp = false;
         }
 
-        if (gameSlowDown) 
+        if (hasPowerUp) 
         {
-            gameSlowDown = false;
-            StartCoroutine(GameSlowDown());
-        }
-
-        if (rerollTop) 
-        {
-            RerollCurrentTop();
-        }
-
-        if (rerollBot) 
-        {
-            RerollCurrentBottom();
-        }
-
-        if (clearTop) 
-        {
-            clearTop = false;
-            shapeManager.ClearTop();
-        }
-
-        if (clearBot) 
-        {
-            clearBot = false;
-            shapeManager.ClearBot();
-        }
-
-        if (Input.GetKeyDown(KeyCode.Q)) 
-        {
-            StartCoroutine(GameSlowDown());
+            powerupSoundTimer += Time.deltaTime;
+            if (powerupSoundTimer >= powerupSoundDelay)
+            {
+                audioManager.PlaySound("powerupReady");
+                powerupSoundTimer = 0;
+            }
         }
     }
 
-    private IEnumerator FreezeBottomScreen() 
+    private IEnumerator FreezeBottomScreen()
     {
+        StartCoroutine(UIManager.PowerupText("BOTTOM FREEZE!"));
         float time = Random.Range(freezeTimeMin, freezeTimeMax);
         shapeManager.botFreeze = true;
 
@@ -96,8 +78,9 @@ public class GameManager : MonoBehaviour
         shapeManager.botFreeze = false;
     }
 
-    private IEnumerator FreezeTopScreen() 
+    private IEnumerator FreezeTopScreen()
     {
+        StartCoroutine(UIManager.PowerupText("TOP FREEZE!"));
         float time = Random.Range(freezeTimeMin, freezeTimeMax);
         shapeManager.topFreeze = true;
 
@@ -106,8 +89,9 @@ public class GameManager : MonoBehaviour
         shapeManager.topFreeze = false;
     }
 
-    private IEnumerator GameSlowDown() 
+    private IEnumerator GameSlowDown()
     {
+        StartCoroutine(UIManager.PowerupText("SLOWDOWN!"));
         float time = Random.Range(slowDownTimeMin, slowDownTimeMax);
         shapeManager.slowDownGame = true;
         shapeManager.topTickSpeed = slowDownSpeed;
@@ -120,17 +104,94 @@ public class GameManager : MonoBehaviour
         StartCoroutine(audioManager.NormalBGMusic(musicSlowSpeed));
     }
 
-    public void RerollCurrentTop() 
+    public void RerollCurrentTop()
     {
-        rerollTop = false;
+        StartCoroutine(UIManager.PowerupText("REROLL TOP!"));
         shapeManager.DeleteTop();
         shapeManager.SpawnTop();
     }
 
-    public void RerollCurrentBottom() 
+    public void RerollCurrentBottom()
     {
-        rerollBot = false;
+        StartCoroutine(UIManager.PowerupText("REROLL BOTTOM!"));
         shapeManager.DeleteBot();
         shapeManager.SpawnBot();
+    }
+
+    private void PowerupTimer() 
+    {
+        if (timeElapsed <= 0f) 
+        {
+
+            hasPowerUp = true;
+            UIManager.timeText.color = UIManager.readyTextColour;
+            audioManager.PlaySound("powerupReady");
+            UIManager.UpdateTime("READY!");
+            timeElapsed = powerupTiming;
+        }
+        else 
+        {
+            timeElapsed -= Time.deltaTime;
+            UIManager.UpdateTime((Mathf.Floor(timeElapsed * 100f) / 100f).ToString());
+        }
+    }
+
+    private void UsePowerup() 
+    {
+        UIManager.timeText.color = UIManager.readyTextStartColour;
+        audioManager.PlaySound("usePowerup");
+        int rnd = Random.Range(0, 7);
+
+        switch (rnd) 
+        {
+            case 0:
+                StartCoroutine(FreezeBottomScreen());
+                break;
+            case 1:
+                StartCoroutine(FreezeTopScreen());
+                break;
+            case 2:
+                StartCoroutine(GameSlowDown());
+                break;
+            case 3:
+                RerollCurrentTop();
+                break;
+            case 4:
+                RerollCurrentBottom();
+                break;
+            case 5:
+                StartCoroutine(UIManager.PowerupText("CLEAR TOP!"));
+                shapeManager.ClearTop();
+                break;
+            case 6:
+                StartCoroutine(UIManager.PowerupText("CLEAR BOTTOM!"));
+                shapeManager.ClearBot();
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void AdjustScore(string currentShape) 
+    {
+        switch (currentShape) 
+        {
+            case "LShapedLeft":
+            case "LShapedRight":
+                score += 20;
+                break;
+            case "Square":
+            case "Straight":
+                score += 10;
+                break;
+            case "Tee":
+            case "ZigzagLeft":
+            case "ZigzagRight":
+                score += 40;
+                break;
+            default:
+                break;
+        }
+        UIManager.UpdateScore(score);
     }
 }

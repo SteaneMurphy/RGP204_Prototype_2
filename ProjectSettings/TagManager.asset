@@ -23,6 +23,13 @@ TagManager:
   - ColMid
   - ColBotLeft
   - ColBotRight
+  - Block8
+  - Block9
+  - Block10
+  - Block11
+  - Block12
+  - Block13
+  - Block14
   layers:
   - Default
   - TransparentFX
@@ -30,7 +37,7 @@ TagManager:
   - 
   - Water
   - UI
-  - 
+  - IgnoreFX
   - 
   - 
   - 

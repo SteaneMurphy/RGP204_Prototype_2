@@ -59,6 +59,16 @@ public class AudioManager : MonoBehaviour
                 freeChannel.volume = 0.3f;
                 freeChannel.Play();
                 break;
+            case "powerupReady":
+                freeChannel.clip = gameSounds[2];
+                freeChannel.Play();
+                break;
+            case "usePowerup":
+                freeChannel.clip = gameSounds[3];
+                freeChannel.pitch = 0.7f;
+                freeChannel.volume = 1.1f;
+                freeChannel.Play();
+                break;
             default:
                 break;
         }
