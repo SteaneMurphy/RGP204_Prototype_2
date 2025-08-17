@@ -33,6 +33,10 @@ public class GameManager : MonoBehaviour
         timeElapsed = powerupTiming;
         hasPowerUp = false;
         gameStart = false;
+
+        audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
+        audioManager.AdjustFolder();
+        shapeManager.LinkAudioManager();
     }
 
     private void Update()

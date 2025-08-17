@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
-using static Unity.VisualScripting.Member;
+using UnityEngine.Audio;
+using UnityEngine.UI;
 
 public class AudioManager : MonoBehaviour
 {
@@ -17,8 +18,29 @@ public class AudioManager : MonoBehaviour
     [SerializeField] float lowPassHigh;
     [SerializeField] float lowPassLow;
 
+    [Header("Menu Music Variables")]
+    [SerializeField] float loopStart;
+    [SerializeField] float loopEnd;
+    [SerializeField] bool stopLoop;
+
+    private static AudioManager instance;
+    private float effectsVolume;
+
+    private void Awake()
+    {
+        if (instance != null && instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
     void Start()
     {
+        stopLoop = false;
         lowPassFilter.enabled = false;
 
         //check for BG music and play if not playing
@@ -27,6 +49,17 @@ public class AudioManager : MonoBehaviour
             channelBGMusic.clip = BGMusic;
             channelBGMusic.loop = true;
             channelBGMusic.Play();
+        }
+    }
+
+    private void Update()
+    {
+        if (!stopLoop)
+        {
+            if (channelBGMusic.isPlaying && channelBGMusic.time >= loopEnd)
+            {
+                channelBGMusic.time = loopStart;
+            }
         }
     }
 
@@ -41,7 +74,7 @@ public class AudioManager : MonoBehaviour
             {
                 freeChannel = channels[i];
                 freeChannel.pitch = 1f;
-                freeChannel.volume = 1f;
+                freeChannel.volume = effectsVolume;
                 break;
             }
         }
@@ -56,7 +89,7 @@ public class AudioManager : MonoBehaviour
             case "rotation":
                 freeChannel.clip = gameSounds[1];
                 freeChannel.pitch = 3f;
-                freeChannel.volume = 0.3f;
+                freeChannel.volume = 0.3f * effectsVolume;
                 freeChannel.Play();
                 break;
             case "powerupReady":
@@ -66,7 +99,7 @@ public class AudioManager : MonoBehaviour
             case "usePowerup":
                 freeChannel.clip = gameSounds[3];
                 freeChannel.pitch = 0.7f;
-                freeChannel.volume = 1.1f;
+                freeChannel.volume = 1.1f * effectsVolume;
                 freeChannel.Play();
                 break;
             default:
@@ -74,7 +107,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    public IEnumerator SlowBGMusic(float pitch) 
+    public IEnumerator SlowBGMusic(float pitch)
     {
         lowPassFilter.cutoffFrequency = lowPassHigh;
         lowPassFilter.enabled = true;
@@ -91,7 +124,7 @@ public class AudioManager : MonoBehaviour
         channelBGMusic.pitch = pitch;
     }
 
-    public IEnumerator NormalBGMusic(float pitch) 
+    public IEnumerator NormalBGMusic(float pitch)
     {
         float elapsed = 0f;
 
@@ -105,5 +138,25 @@ public class AudioManager : MonoBehaviour
         }
         channelBGMusic.pitch = 1f;
         lowPassFilter.enabled = false;
+    }
+
+    public void AdjustFolder()
+    {
+        transform.SetParent(GameObject.Find("Managers").transform);
+    }
+
+    public void StopLoop() 
+    {
+        stopLoop = true;
+    }
+
+    public void AdjustMusicVolume() 
+    {
+        channelBGMusic.volume = GameObject.Find("MusicSlider").GetComponent<Slider>().value;
+    }
+
+    public void AdjustEffectsVolume() 
+    {
+        effectsVolume = GameObject.Find("EffectsSlider").GetComponent<Slider>().value;
     }
 }

@@ -40,6 +40,7 @@ public class ShapeManager : MonoBehaviour
         storeTopTickSpeed = topTickSpeed;
         botTimeElapsed = 0f;
         storeBotTickSpeed = botTickSpeed;
+        shake = GameObject.Find("Main Camera").GetComponent<CameraShake>();
     }
 
     private void Update()
@@ -582,5 +583,10 @@ public class ShapeManager : MonoBehaviour
         }
 
         //move remaining blocks down by amount of lines removed
+    }
+
+    public void LinkAudioManager() 
+    {
+        audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();    
     }
 }
