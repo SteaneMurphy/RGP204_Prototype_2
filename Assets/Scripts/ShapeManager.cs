@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class ShapeManager : MonoBehaviour
@@ -10,6 +11,7 @@ public class ShapeManager : MonoBehaviour
     public GameObject currentBotShape;
     public GameObject topSpawn;
     public GameObject botSpawn;
+    public GameObject midPointBarrier;
 
     public LevelVariables levelScript;
     public AudioManager audioManager;
@@ -34,6 +36,10 @@ public class ShapeManager : MonoBehaviour
     private bool botFastMode = false;
     public bool botFreeze = false;
 
+    private float topScanStart = 0.5f;
+    private float botScanStart = -0.5f;
+    private bool gameOver;
+
     private void Start()
     {
         topTimeElapsed = 0f;
@@ -41,10 +47,16 @@ public class ShapeManager : MonoBehaviour
         botTimeElapsed = 0f;
         storeBotTickSpeed = botTickSpeed;
         shake = GameObject.Find("Main Camera").GetComponent<CameraShake>();
+        gameOver = false;
     }
 
     private void Update()
     {
+        if (gameOver) 
+        {
+            return;
+        }
+
         if (currentTopShape != null && currentBotShape != null)
         {
             DetectInput();
@@ -53,6 +65,38 @@ public class ShapeManager : MonoBehaviour
             UpdateTimerTop();
             UpdateTimerBot();
             CheckForCompleteLines();
+            CheckForLoss();
+        }
+    }
+
+    private void CheckForLoss() 
+    {
+        for (float i = levelScript.botBoundary; i < levelScript.topBoundary; i++)
+        {
+            Vector3 rayOrigin = new Vector3(-1f, i, 0f);
+            Debug.DrawRay(rayOrigin, Vector2.right * 15f, Color.red, 1f);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, Vector2.right, 15f);
+
+            foreach (RaycastHit2D hit in hits)
+            {
+                if (hit.collider.gameObject == currentBotShape || hit.collider.gameObject == currentTopShape)
+                {
+                    continue;
+                }
+
+                if (hit.collider.transform.position.y > 20f) 
+                {
+                    gameManager.GameOver("Player 2");
+                    gameOver = true;
+                    audioManager.BGMusicLowPass();
+                }
+                else if (hit.collider.transform.position.y < -20f) 
+                {
+                    gameManager.GameOver("Player 1");
+                    gameOver = true;
+                    audioManager.BGMusicLowPass();
+                }
+            }
         }
     }
 
@@ -96,6 +140,13 @@ public class ShapeManager : MonoBehaviour
         GameObject topShape = Instantiate(randomShape, topSpawn.transform.position, Quaternion.identity);
         topShape.transform.parent = topContainer.transform;
         currentTopShape = topShape;
+
+        if (CalculateTopCollision(currentTopShape)) 
+        {
+            gameManager.GameOver("Player 2");
+            gameOver = true;
+            audioManager.BGMusicLowPass();
+        }
     }
 
     public void SpawnBot() 
@@ -106,6 +157,13 @@ public class ShapeManager : MonoBehaviour
         GameObject botShape = Instantiate(randomShape, botSpawn.transform.position, Quaternion.identity);
         botShape.transform.parent = botContainer.transform;
         currentBotShape = botShape;
+
+        if (CalculateBotCollision(currentBotShape))
+        {
+            gameManager.GameOver("Player 1");
+            gameOver = true;
+            audioManager.BGMusicLowPass();
+        }
     }
 
     public void DeleteTop() 
@@ -150,40 +208,25 @@ public class ShapeManager : MonoBehaviour
 
     private void DetectInput()
     {
+        //player1
         if (Input.GetKeyDown(KeyCode.A))
         {
-            if(CalculateLeftmostPoint(currentTopShape) > levelScript.leftBoundary && !CalculateLeftCollisionTop(currentTopShape)) 
-            {
-                currentTopShape.transform.position += new Vector3(-1f, 0f, 0f);
-            }
-            if(CalculateLeftmostPoint(currentBotShape) > levelScript.leftBoundary && !CalculateLeftCollisionBot(currentBotShape)) 
-            {
-                currentBotShape.transform.position += new Vector3(-1f, 0f, 0f);
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            if(CalculateRightmostPoint(currentTopShape) < levelScript.rightBoundary && !CalculateRightCollisionTop(currentTopShape)) 
+            if (CalculateLeftmostPoint(currentTopShape) > levelScript.leftBoundary && !CalculateLeftCollisionTop(currentTopShape))
             {
                 currentTopShape.transform.position += new Vector3(1f, 0f, 0f);
             }
-            if (CalculateRightmostPoint(currentBotShape) < levelScript.rightBoundary && !CalculateRightCollisionBot(currentBotShape))
+        }
+        if (Input.GetKeyDown(KeyCode.D))
+        {
+            if (CalculateRightmostPoint(currentTopShape) < levelScript.rightBoundary && !CalculateRightCollisionTop(currentTopShape))
             {
-                currentBotShape.transform.position += new Vector3(1f, 0f, 0f);
+                currentTopShape.transform.position += new Vector3(-1f, 0f, 0f);
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.S))
+        if ((Input.GetKeyDown(KeyCode.S)))
         {
             topFastMode = true;
-            audioManager.PlaySound("blockDrop");
-            shake.Shake(0.2f, 0.3f);
-        }
-
-        if (Input.GetKeyDown(KeyCode.LeftShift)) 
-        {
-            botFastMode = true;
             audioManager.PlaySound("blockDrop");
             shake.Shake(0.2f, 0.3f);
         }
@@ -192,7 +235,71 @@ public class ShapeManager : MonoBehaviour
         {
             audioManager.PlaySound("rotation");
             currentTopShape.transform.Rotate(0, 0, 90);
+            WallKickTop("top");
+        }
+
+        //player2
+        if (Input.GetKeyDown(KeyCode.JoystickButton6))
+        {
+            if (CalculateLeftmostPoint(currentBotShape) > levelScript.leftBoundary && !CalculateLeftCollisionBot(currentBotShape))
+            {
+                currentBotShape.transform.position += new Vector3(-1f, 0f, 0f);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.JoystickButton7))
+        {
+            if (CalculateRightmostPoint(currentBotShape) < levelScript.rightBoundary && !CalculateRightCollisionBot(currentBotShape))
+            {
+                currentBotShape.transform.position += new Vector3(1f, 0f, 0f);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.JoystickButton2))
+        {
+            botFastMode = true;
+            audioManager.PlaySound("blockDrop");
+            shake.Shake(0.2f, 0.3f);
+        }
+
+        if (Input.GetKeyDown(KeyCode.JoystickButton5)) 
+        {
+            audioManager.PlaySound("rotation");
             currentBotShape.transform.Rotate(0, 0, 90);
+            WallKickBot("bot");
+        }
+    }
+
+    private bool OutOfBounds(GameObject currentShape) 
+    {
+        foreach (Transform block in currentShape.transform) 
+        {
+            float minX = block.GetComponent<Renderer>().bounds.min.x;
+            float maxX = block.GetComponent<Renderer>().bounds.max.x;
+
+            if (minX < levelScript.leftBoundary || maxX > levelScript.rightBoundary)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void WallKickTop(string player) 
+    {
+        if (OutOfBounds(currentTopShape)) 
+        {
+            currentTopShape.transform.position = new Vector3(currentTopShape.transform.position.x + 1f, currentTopShape.transform.position.y, currentTopShape.transform.position.z);
+            WallKickTop("top");
+        }
+    }
+
+    private void WallKickBot(string player)
+    {
+        if (OutOfBounds(currentBotShape))
+        {
+            currentBotShape.transform.position = new Vector3(currentBotShape.transform.position.x + 1f, currentBotShape.transform.position.y, currentBotShape.transform.position.z);
+            WallKickBot("bot");
         }
     }
 
@@ -239,7 +346,7 @@ public class ShapeManager : MonoBehaviour
         else 
         {
             topFastMode = false;
-            gameManager.AdjustScore(currentTopShape.gameObject.tag);
+            gameManager.AdjustScore(currentTopShape.gameObject.tag, "top");
             SpawnTop();
         }
     }
@@ -253,7 +360,7 @@ public class ShapeManager : MonoBehaviour
         else
         {
             botFastMode = false;
-            gameManager.AdjustScore(currentBotShape.gameObject.tag);
+            gameManager.AdjustScore(currentBotShape.gameObject.tag, "bot");
             SpawnBot();
         }
     }
@@ -475,7 +582,7 @@ public class ShapeManager : MonoBehaviour
     private void CheckForCompleteLines() 
     {
         // for each line above the midpoint
-        for (float i = 0.5f; i < levelScript.topBoundary; i++) 
+        for (float i = topScanStart; i < levelScript.topBoundary; i++) 
         {
             int blocksHit = 0;
             Vector3 rayOrigin = new Vector3(-1f, i, 0f);
@@ -525,11 +632,53 @@ public class ShapeManager : MonoBehaviour
                         Destroy(hit.collider.gameObject);
                     }
                 }
+                //play clear sound
+                gameManager.AdjustScore("clear", "top");
+
+                //get all blocks above this line
+                List<GameObject> allBlocks = new List<GameObject>();
+                for (float j = i + 1; j < levelScript.topBoundary; j++)
+                {
+                    Vector3 secondRayOrigin = new Vector3(-1f, j, 0f);
+                    Debug.DrawRay(secondRayOrigin, Vector2.right * 15f, Color.red, 1f);
+                    RaycastHit2D[] secondHits = Physics2D.RaycastAll(secondRayOrigin, Vector2.right, 15f);
+
+                    foreach (RaycastHit2D hit in secondHits)
+                    {
+                        if (hit.collider.gameObject == currentTopShape) 
+                        {
+                            continue;
+                        }
+
+                        if (hit.collider.gameObject.tag == "Block1" ||
+                            hit.collider.gameObject.tag == "Block2" ||
+                            hit.collider.gameObject.tag == "Block3" ||
+                            hit.collider.gameObject.tag == "Block4" ||
+                            hit.collider.gameObject.tag == "Block5" ||
+                            hit.collider.gameObject.tag == "Block6" ||
+                            hit.collider.gameObject.tag == "Block7" ||
+                            hit.collider.gameObject.tag == "Block8" ||
+                            hit.collider.gameObject.tag == "Block9" ||
+                            hit.collider.gameObject.tag == "Block10" ||
+                            hit.collider.gameObject.tag == "Block11" ||
+                            hit.collider.gameObject.tag == "Block12" ||
+                            hit.collider.gameObject.tag == "Block13" ||
+                            hit.collider.gameObject.tag == "Block14")
+                        {
+                            allBlocks.Add(hit.collider.gameObject);
+                        }
+                    }
+                }
+                foreach (GameObject block in allBlocks) 
+                {
+                    block.transform.position = new Vector3(block.transform.position.x, block.transform.position.y - 1f, block.transform.position.z);
+                }
+                i--;
             }
         }
 
         // for each line below the midpoint
-        for (float i = -0.5f; i > levelScript.botBoundary; i--)
+        for (float i = botScanStart; i > levelScript.botBoundary; i--)
         {
             int blocksHit = 0;
             Vector3 rayOrigin = new Vector3(-1f, i, 0f);
@@ -579,14 +728,161 @@ public class ShapeManager : MonoBehaviour
                         Destroy(hit.collider.gameObject);
                     }
                 }
+                //play clear sound
+                gameManager.AdjustScore("clear", "bot");
+
+                //get all blocks below this line
+                List<GameObject> allBlocks = new List<GameObject>();
+                for (float j = i - 1; j < levelScript.botBoundary; j--)
+                {
+                    Vector3 secondRayOrigin = new Vector3(-1f, j, 0f);
+                    Debug.DrawRay(secondRayOrigin, Vector2.right * 15f, Color.red, 1f);
+                    RaycastHit2D[] secondHits = Physics2D.RaycastAll(secondRayOrigin, Vector2.right, 15f);
+
+                    foreach (RaycastHit2D hit in secondHits)
+                    {
+                        if (hit.collider.gameObject == currentBotShape)
+                        {
+                            continue;
+                        }
+
+                        if (hit.collider.gameObject.tag == "Block1" ||
+                            hit.collider.gameObject.tag == "Block2" ||
+                            hit.collider.gameObject.tag == "Block3" ||
+                            hit.collider.gameObject.tag == "Block4" ||
+                            hit.collider.gameObject.tag == "Block5" ||
+                            hit.collider.gameObject.tag == "Block6" ||
+                            hit.collider.gameObject.tag == "Block7" ||
+                            hit.collider.gameObject.tag == "Block8" ||
+                            hit.collider.gameObject.tag == "Block9" ||
+                            hit.collider.gameObject.tag == "Block10" ||
+                            hit.collider.gameObject.tag == "Block11" ||
+                            hit.collider.gameObject.tag == "Block12" ||
+                            hit.collider.gameObject.tag == "Block13" ||
+                            hit.collider.gameObject.tag == "Block14")
+                        {
+                            allBlocks.Add(hit.collider.gameObject);
+                        }
+                    }
+                }
+                foreach (GameObject block in allBlocks)
+                {
+                    block.transform.position = new Vector3(block.transform.position.x, block.transform.position.y + 1f, block.transform.position.z);
+                }
+                i++;
             }
         }
+    }
 
-        //move remaining blocks down by amount of lines removed
+    private void ShiftBlocksUp() 
+    {
+        for (float i = levelScript.botBoundary; i < levelScript.topBoundary; i++) 
+        {
+            Vector3 rayOrigin = new Vector3(-1f, i, 0f);
+            Debug.DrawRay(rayOrigin, Vector2.right * 15f, Color.red, 1f);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, Vector2.right, 15f);
+
+            List<GameObject> allBlocks = new List<GameObject>();
+            foreach (RaycastHit2D hit in hits) 
+            {
+                if (hit.collider.gameObject == currentBotShape || hit.collider.gameObject == currentTopShape)
+                {
+                    continue;
+                }
+
+                if (hit.collider.gameObject.tag == "Block1" ||
+                    hit.collider.gameObject.tag == "Block2" ||
+                    hit.collider.gameObject.tag == "Block3" ||
+                    hit.collider.gameObject.tag == "Block4" ||
+                    hit.collider.gameObject.tag == "Block5" ||
+                    hit.collider.gameObject.tag == "Block6" ||
+                    hit.collider.gameObject.tag == "Block7" ||
+                    hit.collider.gameObject.tag == "Block8" ||
+                    hit.collider.gameObject.tag == "Block9" ||
+                    hit.collider.gameObject.tag == "Block10" ||
+                    hit.collider.gameObject.tag == "Block11" ||
+                    hit.collider.gameObject.tag == "Block12" ||
+                    hit.collider.gameObject.tag == "Block13" ||
+                    hit.collider.gameObject.tag == "Block14")
+                {
+                    allBlocks.Add(hit.collider.gameObject);
+                }
+            }
+            foreach (GameObject block in allBlocks)
+            {
+                block.transform.position = new Vector3(block.transform.position.x, block.transform.position.y + 1f, block.transform.position.z);
+            }
+        }
+    }
+
+    private void ShiftBlocksDown() 
+    {
+        for (float i = levelScript.botBoundary; i < levelScript.topBoundary; i++)
+        {
+            Vector3 rayOrigin = new Vector3(-1f, i, 0f);
+            Debug.DrawRay(rayOrigin, Vector2.right * 15f, Color.red, 1f);
+            RaycastHit2D[] hits = Physics2D.RaycastAll(rayOrigin, Vector2.right, 15f);
+
+            List<GameObject> allBlocks = new List<GameObject>();
+            foreach (RaycastHit2D hit in hits)
+            {
+                if (hit.collider.gameObject == currentBotShape || hit.collider.gameObject == currentTopShape)
+                {
+                    continue;
+                }
+
+                if (hit.collider.gameObject.tag == "Block1" ||
+                    hit.collider.gameObject.tag == "Block2" ||
+                    hit.collider.gameObject.tag == "Block3" ||
+                    hit.collider.gameObject.tag == "Block4" ||
+                    hit.collider.gameObject.tag == "Block5" ||
+                    hit.collider.gameObject.tag == "Block6" ||
+                    hit.collider.gameObject.tag == "Block7" ||
+                    hit.collider.gameObject.tag == "Block8" ||
+                    hit.collider.gameObject.tag == "Block9" ||
+                    hit.collider.gameObject.tag == "Block10" ||
+                    hit.collider.gameObject.tag == "Block11" ||
+                    hit.collider.gameObject.tag == "Block12" ||
+                    hit.collider.gameObject.tag == "Block13" ||
+                    hit.collider.gameObject.tag == "Block14")
+                {
+                    allBlocks.Add(hit.collider.gameObject);
+                }
+            }
+            foreach (GameObject block in allBlocks)
+            {
+                block.transform.position = new Vector3(block.transform.position.x, block.transform.position.y - 1f, block.transform.position.z);
+            }
+        }
     }
 
     public void LinkAudioManager() 
     {
         audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();    
+    }
+
+    public void MoveMidpoint(int amount, string player) 
+    {
+        if (player == "top")
+        {
+            topScanStart -= amount;
+            botScanStart += amount;
+            levelScript.AdjustMidpoint(-amount);
+            ShiftBlocksDown();
+        }
+        else
+        {
+            topScanStart += amount;
+            botScanStart -= amount;
+            levelScript.AdjustMidpoint(amount);
+            ShiftBlocksUp();
+        }
+
+        // sync GameObject with variable
+        midPointBarrier.transform.position = new Vector3(
+            midPointBarrier.transform.position.x,
+            levelScript.midBoundary,
+            midPointBarrier.transform.position.z
+        );
     }
 }

@@ -1,19 +1,20 @@
 using System.Collections;
 using UnityEngine;
-using static UnityEngine.UI.Image;
 
 public class GameManager : MonoBehaviour
 {
     public ShapeManager shapeManager;
     public AudioManager audioManager;
     public UIManager UIManager;
-
-    public GameObject tutorialOverlay;
+    private bool player1Ready;
+    private bool player2Ready;
     private bool gameStart;
 
     private int score = 0;
+    private int score2 = 0;
 
-    private bool hasPowerUp;
+    private bool player1Powerup;
+    private bool player2Powerup;
 
     [Header("Powerup Variables")]
     [SerializeField] float freezeTimeMin;
@@ -24,43 +25,89 @@ public class GameManager : MonoBehaviour
     [SerializeField] float musicSlowSpeed;
     [SerializeField] float powerupTiming;
     [SerializeField] float powerupSoundDelay;
-    private float timeElapsed;
+    private float timeElapsedPlayer1;
+    private float timeElapsedPlayer2;
     private float powerupSoundTimer;
+
+    private int lastDiffScore = 0;
 
     private void Start()
     {
         shapeManager.slowDownSpeed = slowDownSpeed;
-        timeElapsed = powerupTiming;
-        hasPowerUp = false;
+        timeElapsedPlayer1 = powerupTiming;
+        timeElapsedPlayer2 = powerupTiming;
+        player1Powerup = false;
+        player2Powerup = false;
+        player1Ready = false;
+        player2Ready = false;
         gameStart = false;
 
         audioManager = GameObject.Find("AudioManager").GetComponent<AudioManager>();
         audioManager.AdjustFolder();
         shapeManager.LinkAudioManager();
+        UIManager.UpdateScore(0);
+        UIManager.UpdateScoreBot(0);
     }
 
     private void Update()
     {
+        CalculateScoreDifference();
+
         if (Input.GetKeyDown(KeyCode.Q) && gameStart == false)
         {
-            tutorialOverlay.SetActive(false);
+            UIManager.RemovePlayer1Overlay();
+            UIManager.TurnOnGameUIPlayer1();
+            player1Ready = true;
+        }
+
+        if (Input.GetKeyDown(KeyCode.JoystickButton4) && gameStart == false) 
+        {
+            UIManager.RemovePlayer2Overlay();
+            UIManager.TurnOnGameUIPlayer2();
+            player2Ready = true;
+        }
+
+        if (player1Ready && player2Ready && gameStart == false) 
+        {
+            UIManager.PlayerOverlayOn();
             shapeManager.SpawnTop();
             shapeManager.SpawnBot();
             gameStart = true;
         }
 
-        if (!hasPowerUp && gameStart) 
+        if (!player1Powerup && gameStart) 
         {
-            PowerupTimer();
+            PowerupTimerPlayer1();
         }
 
-        if (Input.GetKey(KeyCode.Q) && hasPowerUp && gameStart)
+        if (!player2Powerup && gameStart)
+        {
+            PowerupTimerPlayer2();
+        }
+
+        if (Input.GetKey(KeyCode.Q) && player1Powerup && gameStart)
         {
             UsePowerup();
-            hasPowerUp = false;
+            player1Powerup = false;
         }
 
-        if (hasPowerUp) 
+        if (Input.GetKey(KeyCode.JoystickButton4) && player2Powerup && gameStart)
+        {
+            UsePowerup();
+            player2Powerup = false;
+        }
+
+        if (player1Powerup) 
+        {
+            powerupSoundTimer += Time.deltaTime;
+            if (powerupSoundTimer >= powerupSoundDelay)
+            {
+                audioManager.PlaySound("powerupReady");
+                powerupSoundTimer = 0;
+            }
+        }
+
+        if (player2Powerup)
         {
             powerupSoundTimer += Time.deltaTime;
             if (powerupSoundTimer >= powerupSoundDelay)
@@ -122,21 +169,39 @@ public class GameManager : MonoBehaviour
         shapeManager.SpawnBot();
     }
 
-    private void PowerupTimer() 
+    private void PowerupTimerPlayer1() 
     {
-        if (timeElapsed <= 0f) 
+        if (timeElapsedPlayer1 <= 0f) 
         {
 
-            hasPowerUp = true;
-            UIManager.timeText.color = UIManager.readyTextColour;
+            player1Powerup = true;
+            UIManager.timeText.color = UIManager.readyTextColourPlayer1;
             audioManager.PlaySound("powerupReady");
             UIManager.UpdateTime("READY!");
-            timeElapsed = powerupTiming;
+            timeElapsedPlayer1 = powerupTiming;
         }
         else 
         {
-            timeElapsed -= Time.deltaTime;
-            UIManager.UpdateTime((Mathf.Floor(timeElapsed * 100f) / 100f).ToString());
+            timeElapsedPlayer1 -= Time.deltaTime;
+            UIManager.UpdateTime((Mathf.Floor(timeElapsedPlayer1 * 100f) / 100f).ToString());
+        }
+    }
+
+    private void PowerupTimerPlayer2()
+    {
+        if (timeElapsedPlayer2 <= 0f)
+        {
+
+            player2Powerup = true;
+            UIManager.timeText2.color = UIManager.readyTextColourPlayer2;
+            audioManager.PlaySound("powerupReady");
+            UIManager.UpdateTime2("READY!");
+            timeElapsedPlayer2 = powerupTiming;
+        }
+        else
+        {
+            timeElapsedPlayer2 -= Time.deltaTime;
+            UIManager.UpdateTime2((Mathf.Floor(timeElapsedPlayer2 * 100f) / 100f).ToString());
         }
     }
 
@@ -176,26 +241,64 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void AdjustScore(string currentShape) 
+    public void AdjustScore(string currentShape, string player) 
     {
+        int tempScore = 0;
+
         switch (currentShape) 
         {
             case "LShapedLeft":
             case "LShapedRight":
-                score += 20;
+                tempScore += 20;
                 break;
             case "Square":
             case "Straight":
-                score += 10;
+                tempScore += 10;
                 break;
             case "Tee":
             case "ZigzagLeft":
             case "ZigzagRight":
-                score += 40;
+                tempScore += 40;
+                break;
+            case "Clear":
+                tempScore += 100;
                 break;
             default:
                 break;
         }
-        UIManager.UpdateScore(score);
+
+        if (player == "top")
+        {
+            score += tempScore;
+            UIManager.UpdateScore(score);
+        }
+        else if (player == "bot") 
+        {
+            score2 += tempScore;
+            UIManager.UpdateScoreBot(score2);
+        }
+    }
+
+    private void CalculateScoreDifference()
+    {
+        int diff = Mathf.Abs(score - score2);
+        int diffScore = diff / 100;
+        string playerAdvantage = score > score2 ? "top" : "bot";
+
+        // calculate change since last update
+        int moveAmount = diffScore - lastDiffScore;
+
+        if (moveAmount > 0)
+        {
+            shapeManager.MoveMidpoint(moveAmount, playerAdvantage);
+        }
+
+        // update last difference
+        lastDiffScore = diffScore;
+    }
+
+    public void GameOver(string player) 
+    {
+        UIManager.DisplayGameOverScreen(player, score.ToString(), score2.ToString());
     }
 }

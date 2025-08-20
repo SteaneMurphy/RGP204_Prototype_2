@@ -40,6 +40,7 @@ public class AudioManager : MonoBehaviour
 
     void Start()
     {
+        effectsVolume = 1.0f;
         stopLoop = false;
         lowPassFilter.enabled = false;
 
@@ -122,6 +123,12 @@ public class AudioManager : MonoBehaviour
             yield return null;
         }
         channelBGMusic.pitch = pitch;
+    }
+
+    public void BGMusicLowPass()
+    {
+        lowPassFilter.cutoffFrequency = lowPassLow;
+        lowPassFilter.enabled = true;
     }
 
     public IEnumerator NormalBGMusic(float pitch)

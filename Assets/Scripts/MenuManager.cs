@@ -14,15 +14,11 @@ public class MenuManager : MonoBehaviour
     public Slider musicSlider;
     public Slider effectsSlider;
 
-    private void Start()
-    {
-        musicSlider.value = 1;
-        effectsSlider.value = 1;
-    }
-
     public void NewGame()
     {
         GameObject.Find("AudioManager").GetComponent<AudioManager>().StopLoop();
+        mainCamera.transform.Rotate(0f, 0f, -90f);
+        mainCamera.fieldOfView = 15f;
         SceneManager.LoadScene(1);              //main game scene
     }
 

@@ -18,4 +18,9 @@ public class LevelVariables : MonoBehaviour
         botBoundary = botScreen.GetComponent<Renderer>().bounds.min.y;
         midBoundary = topScreen.GetComponent<Renderer>().bounds.min.y;
     }
+
+    public void AdjustMidpoint(int amount) 
+    {
+        midBoundary += amount;
+    }
 }
